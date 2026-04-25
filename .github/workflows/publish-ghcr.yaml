@@ -1,0 +1,98 @@
+# Source - https://stackoverflow.com/a/77002385
+# Posted by Trigus
+# Retrieved 2026-04-25, License - CC BY-SA 4.0
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Build and publish Docker image to GHCR
+
+on:
+  workflow_dispatch:
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    steps:
+      - name: Get latest release
+        id: get_release
+        run: |
+          # Fetch release information and extract the release tag
+          RELEASE_TAG=$(curl -s https://api.github.com/repos/Kozea/Radicale/releases/latest | jq -r '.tag_name')
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          echo "latest release: $RELEASE_TAG"
+      
+      - name: Store artifacts
+        run: |
+          # Store the newly fetched release version in a file
+          echo "${{ steps.get_release.outputs.RELEASE_TAG }}" > radicale-release-info
+          echo "Saved ${{ steps.get_release.outputs.RELEASE_TAG }} to radicale-release-info"
+
+      - name: Upload new artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: radicale-release-info
+          path: radicale-release-info
+    
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the ghcr container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+#      - name: Log in to the dockerhub container registry
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ vars.DOCKERHUB_ORGNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata for Docker build
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            name=${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: latest=true
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=schedule,prefix=nightly-,pattern={{date 'YYYYMMDD'}}
+            type=raw,enable=${{ github.event_name == 'workflow_dispatch' }},value=workflow_dispatch-{{branch}}-{{sha}}
+            type=raw,enable=${{ github.event_name == 'release' }},value=stable
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: DEPENDENCIES=bcrypt,argon2,ldap
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
