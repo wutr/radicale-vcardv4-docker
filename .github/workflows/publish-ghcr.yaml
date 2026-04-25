@@ -44,7 +44,7 @@ jobs:
           echo "Saved ${{ steps.get_release.outputs.RELEASE_TAG }} to radicale-release-info"
 
       - name: Upload new artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: radicale-release-info
           path: radicale-release-info
