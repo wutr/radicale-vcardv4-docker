@@ -15,7 +15,7 @@ ARG DEPENDENCIES=bcrypt
 #   https://github.com/py-vobject/vobject/pull/124
 ARG VOBJECT="vobject @ git+https://github.com/jwiegley/vobject.git"
 
-RUN apk add --no-cache --virtual gcc libffi-dev musl-dev \
+RUN apk add --no-cache --virtual gcc libffi-dev musl-dev git \
     && python -m venv /app/venv \
     && /app/venv/bin/pip install --no-cache-dir "${VOBJECT}" "Radicale[${DEPENDENCIES}] @ https://github.com/Kozea/Radicale/archive/${VERSION}.tar.gz"
 
