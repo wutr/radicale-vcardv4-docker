@@ -6,7 +6,7 @@ name: Check for new release of Radicale
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '37 0 * * *'
   workflow_dispatch:
 
 jobs:
