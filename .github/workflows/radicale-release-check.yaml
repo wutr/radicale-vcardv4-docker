@@ -17,7 +17,7 @@ jobs:
 
       - name: Download previous release info
         id: download-artifact
-        uses: dawidd6/action-download-artifact@v2 # It's not possible to use actions/upload-artifact as of the time of writing
+        uses: dawidd6/action-download-artifact@v21 # actions/download-artifact@v4+ supports downloading from another workflow (i.e. publish-ghcr.yaml) with a token
         with:
           name: radicale-release-info
           workflow_conclusion: success
